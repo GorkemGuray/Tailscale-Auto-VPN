@@ -24,14 +24,19 @@ set "RESET=%ESC%[0m"
 
 :: LOG DOSYASI AYARLARI
 set "LOGDIR=%~dp0logs"
-if not exist "%LOGDIR%" mkdir "%LOGDIR%"
-set "LOGFILE=%LOGDIR%\kurulum_%date:~-4%%date:~3,2%%date:~0,2%_%time:~0,2%%time:~3,2%%time:~6,2%.log"
-set "LOGFILE=%LOGFILE: =0%"
+if not exist "%LOGDIR%" mkdir "%LOGDIR%" 2>nul
 
-:: LOG FONKSIYONU
-call :Log "=========================================="
-call :Log "Kurulum Basladi: %date% %time%"
-call :Log "=========================================="
+:: Tarih/saat al (bolgesel ayarlardan bagimsiz)
+for /f "tokens=2 delims==" %%a in ('wmic os get localdatetime /value 2^>nul') do set "dt=%%a"
+set "LOGFILE=%LOGDIR%\kurulum_%dt:~0,8%_%dt:~8,6%.log"
+
+:: Log dosyasi olusturulamazsa varsayilan kullan
+if "%dt%"=="" set "LOGFILE=%LOGDIR%\kurulum.log"
+
+:: LOG FONKSIYONU (ilk calisma)
+echo [%date% %time%] ========================================== >> "%LOGFILE%" 2>nul
+echo [%date% %time%] Kurulum Basladi >> "%LOGFILE%" 2>nul
+echo [%date% %time%] ========================================== >> "%LOGFILE%" 2>nul
 
 :: 1. YONETICI IZNI KONTROLU
 net session >nul 2>&1
