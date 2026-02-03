@@ -112,10 +112,33 @@ function Test-IpAvailable {
 }
 
 function Get-AdapterCurrentIp {
-    param([string]$AdapterName)
+    param(
+        [string]$AdapterName,
+        [string]$TargetSubnet = ""
+    )
     
-    $config = Get-NetIPAddress -InterfaceAlias $AdapterName -AddressFamily IPv4 -ErrorAction SilentlyContinue
-    return $config.IPAddress
+    # Sadece gecerli (Preferred) ve hedef subnetteki IP'leri al
+    $configs = Get-NetIPAddress -InterfaceAlias $AdapterName -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+    Where-Object { 
+        $_.AddressState -eq "Preferred" -and 
+        $_.IPAddress -notlike "169.254.*"  # APIPA adreslerini haric tut
+    }
+    
+    if ($null -eq $configs) {
+        return $null
+    }
+    
+    # Eger hedef subnet belirtilmisse, sadece o subnetteki IP'yi don
+    if (-not [string]::IsNullOrEmpty($TargetSubnet)) {
+        $matchingIp = $configs | Where-Object { $_.IPAddress -like "$TargetSubnet.*" } | Select-Object -First 1
+        if ($matchingIp) {
+            return $matchingIp.IPAddress
+        }
+        return $null
+    }
+    
+    # Hedef subnet belirtilmemisse ilk gecerli IP'yi don
+    return ($configs | Select-Object -First 1).IPAddress
 }
 
 function Find-FreeIp {
@@ -296,15 +319,42 @@ Write-Host "`n--------------------------------------------------------"
 Write-Host "4. IP Yapilandirmasi Kontrol Ediliyor..."
 Write-Host "--------------------------------------------------------"
 
-$currentIp = Get-AdapterCurrentIp -AdapterName $SelectedAdapter
+# IP durumunu detayli kontrol et
+$ipConfig = Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+Where-Object { $_.IPAddress -like "$Subnet.*" }
 
-if ($currentIp -and $currentIp -like "$Subnet.*") {
+$currentIp = $null
+$ipState = $null
+$needsReassignment = $true
+
+if ($ipConfig) {
+    $currentIp = $ipConfig.IPAddress
+    $ipState = $ipConfig.AddressState
+    
+    Write-ColorText "[DEBUG] Mevcut IP: $currentIp, Durum: $ipState" "Info"
+    Write-Log "Mevcut IP: $currentIp, Durum: $ipState"
+    
+    # Sadece "Preferred" durumundaki IP'ler gecerli sayilir
+    if ($ipState -eq "Preferred") {
+        # Netsh ile de dogrula
+        $netshOutput = netsh interface ip show addresses "$SelectedAdapter" 2>&1
+        if ($netshOutput -match $currentIp) {
+            $needsReassignment = $false
+        }
+    }
+    else {
+        Write-ColorText "[UYARI] IP '$ipState' durumunda - yeniden atanacak." "Warning"
+        Write-Log "IP $ipState durumunda, yeniden atama gerekiyor"
+    }
+}
+
+if (-not $needsReassignment) {
     Write-ColorText "[BILGI] Bu kartta zaten $Subnet.x IP adresi var: $currentIp" "Success"
     Write-ColorText "[BILGI] Mevcut ayarlar korundu." "Info"
     Write-Log "IP zaten dogru subnetde: $currentIp"
 }
-else {
-    Write-ColorText "[ISLEM] Kart $Subnet blogunda degil. IP ataniyor..." "Warning"
+if ($needsReassignment) {
+    Write-ColorText "[ISLEM] Kart $Subnet blogunda degil veya IP gecersiz. IP ataniyor..." "Warning"
     Write-Log "IP atama gerekiyor"
     
     $newIp = Find-FreeIp -SubnetBase $Subnet -Min $IpMin -Max $IpMax
