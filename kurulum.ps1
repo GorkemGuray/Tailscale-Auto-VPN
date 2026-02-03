@@ -251,7 +251,22 @@ function Test-ValidHostname {
     # - 1-63 karakter uzunlugunda olmali
     if ([string]::IsNullOrEmpty($Name)) { return $false }
     if ($Name.Length -gt 63) { return $false }
-    if ($Name -notmatch '^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$' -and $Name -notmatch '^[a-zA-Z0-9]$') { return $false }
+    
+    # Her karakterin ASCII degerini kontrol et (Turkce karakterleri yakala)
+    foreach ($char in $Name.ToCharArray()) {
+        $ascii = [int][char]$char
+        # Gecerli karakterler: 0-9 (48-57), A-Z (65-90), a-z (97-122), tire (45)
+        $isValid = ($ascii -ge 48 -and $ascii -le 57) -or # 0-9
+        ($ascii -ge 65 -and $ascii -le 90) -or # A-Z
+        ($ascii -ge 97 -and $ascii -le 122) -or # a-z
+        ($ascii -eq 45)                          # tire (-)
+        if (-not $isValid) {
+            return $false
+        }
+    }
+    
+    # Tire ile baslamamali veya bitmemeli
+    if ($Name.StartsWith('-') -or $Name.EndsWith('-')) { return $false }
     if ($Name -match '--') { return $false }  # Arka arkaya tire olmamali
     return $true
 }
