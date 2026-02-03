@@ -368,22 +368,23 @@ if ($needsReassignment) {
     Write-Log "Musait IP bulundu: $newIp"
     
     try {
-        # Oncelikle DHCP'yi devre disi birak (statik IP icin gerekli)
-        Set-NetIPInterface -InterfaceAlias $SelectedAdapter -Dhcp Disabled -ErrorAction SilentlyContinue
+        # netsh ile tek komutta: DHCP kapat + statik IP ata
+        # Bu komut DHCP acik olsa bile calisir
+        netsh interface ip set address name="$SelectedAdapter" static $newIp 255.255.255.0 | Out-Null
         
-        # Mevcut IP'leri kaldir
-        Remove-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue
+        # Sonucu kontrol et
+        Start-Sleep -Seconds 1
+        $checkIp = (Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress
         
-        # Default gateway kaldir
-        Remove-NetRoute -InterfaceAlias $SelectedAdapter -DestinationPrefix "0.0.0.0/0" -Confirm:$false -ErrorAction SilentlyContinue
+        if ($checkIp -contains $newIp) {
+            Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
+            Write-Log "IP atandi: $newIp"
+        }
+        else {
+            throw "IP atanamadi, mevcut IP: $checkIp"
+        }
         
-        # Yeni IP ata
-        New-NetIPAddress -InterfaceAlias $SelectedAdapter -IPAddress $newIp -PrefixLength 24 -ErrorAction Stop | Out-Null
-        
-        Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
-        Write-Log "IP atandi: $newIp"
-        
-        Start-Sleep -Seconds 2
+        Start-Sleep -Seconds 1
     }
     catch {
         Write-ColorText "[HATA] IP atanamadi: $_" "Error"
