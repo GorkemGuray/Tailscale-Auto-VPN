@@ -381,16 +381,25 @@ $existingIps = Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily 
 Where-Object { $_.AddressState -eq "Preferred" -or $_.AddressState -eq "Tentative" }
 
 if ($existingIps) {
+    # Oncelikle bu karttaki tum IP'leri goster
+    Write-Host "[BILGI] $SelectedAdapter kartindaki IP adresleri:"
     foreach ($ip in $existingIps) {
-        # IP adresinin hedef subnet ile baslayip baslamadigini kontrol et
+        Write-Host "        - $($ip.IPAddress) (Durum: $($ip.AddressState))"
+    }
+    
+    # Hedef subnete ait IP var mi kontrol et
+    foreach ($ip in $existingIps) {
         if ($ip.IPAddress.StartsWith("$Subnet.")) {
             $currentIp = $ip.IPAddress
             $hasCorrectIp = $true
-            Write-ColorText "[BILGI] Bu kartta zaten $Subnet.x IP adresi var: $currentIp" "Success"
-            Write-ColorText "[BILGI] Mevcut ayarlar korundu." "Info"
-            Write-Log "IP zaten dogru subnetde: $currentIp"
             break
         }
+    }
+    
+    if ($hasCorrectIp) {
+        Write-ColorText "[BILGI] Bu kartta $Subnet.x subnetinde IP mevcut: $currentIp" "Success"
+        Write-ColorText "[BILGI] Mevcut ayarlar korundu, yeni IP atanmayacak." "Info"
+        Write-Log "IP zaten dogru subnetde: $currentIp"
     }
 }
 
