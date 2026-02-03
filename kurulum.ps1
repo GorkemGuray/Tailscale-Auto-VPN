@@ -106,7 +106,8 @@ function Get-NetworkAdapters {
 function Test-IpAvailable {
     param([string]$IpAddress)
     
-    $ping = Test-Connection -ComputerName $IpAddress -Count 1 -Quiet -TimeoutSeconds 1 -ErrorAction SilentlyContinue
+    # Windows PowerShell 5.1 uyumu icin -TimeoutSeconds yerine basit ping kullaniliyor
+    $ping = Test-Connection -ComputerName $IpAddress -Count 1 -Quiet -ErrorAction SilentlyContinue
     return -not $ping
 }
 
@@ -317,8 +318,14 @@ else {
     Write-Log "Musait IP bulundu: $newIp"
     
     try {
+        # Oncelikle DHCP'yi devre disi birak (statik IP icin gerekli)
+        Set-NetIPInterface -InterfaceAlias $SelectedAdapter -Dhcp Disabled -ErrorAction SilentlyContinue
+        
         # Mevcut IP'leri kaldir
         Remove-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -Confirm:$false -ErrorAction SilentlyContinue
+        
+        # Default gateway kaldir
+        Remove-NetRoute -InterfaceAlias $SelectedAdapter -DestinationPrefix "0.0.0.0/0" -Confirm:$false -ErrorAction SilentlyContinue
         
         # Yeni IP ata
         New-NetIPAddress -InterfaceAlias $SelectedAdapter -IPAddress $newIp -PrefixLength 24 -ErrorAction Stop | Out-Null
