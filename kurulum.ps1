@@ -372,16 +372,26 @@ Write-Host "`n--------------------------------------------------------"
 Write-Host "4. IP Yapilandirmasi Kontrol Ediliyor..."
 Write-Host "--------------------------------------------------------"
 
-# netsh ile mevcut IP'yi kontrol et
-$netshOutput = netsh interface ip show config name="$SelectedAdapter"
+# Oncelikle Get-NetIPAddress ile kontrol et (daha guvenilir)
 $hasCorrectIp = $false
+$currentIp = $null
 
-if ($netshOutput -match "IP Address:\s*($Subnet\.\d+)") {
-    $currentIp = $Matches[1]
-    $hasCorrectIp = $true
-    Write-ColorText "[BILGI] Bu kartta zaten $Subnet.x IP adresi var: $currentIp" "Success"
-    Write-ColorText "[BILGI] Mevcut ayarlar korundu." "Info"
-    Write-Log "IP zaten dogru subnetde: $currentIp"
+# Secilen ag kartindaki IPv4 adreslerini kontrol et
+$existingIps = Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+Where-Object { $_.AddressState -eq "Preferred" -or $_.AddressState -eq "Tentative" }
+
+if ($existingIps) {
+    foreach ($ip in $existingIps) {
+        # IP adresinin hedef subnet ile baslayip baslamadigini kontrol et
+        if ($ip.IPAddress.StartsWith("$Subnet.")) {
+            $currentIp = $ip.IPAddress
+            $hasCorrectIp = $true
+            Write-ColorText "[BILGI] Bu kartta zaten $Subnet.x IP adresi var: $currentIp" "Success"
+            Write-ColorText "[BILGI] Mevcut ayarlar korundu." "Info"
+            Write-Log "IP zaten dogru subnetde: $currentIp"
+            break
+        }
+    }
 }
 
 if (-not $hasCorrectIp) {
