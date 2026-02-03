@@ -319,42 +319,20 @@ Write-Host "`n--------------------------------------------------------"
 Write-Host "4. IP Yapilandirmasi Kontrol Ediliyor..."
 Write-Host "--------------------------------------------------------"
 
-# IP durumunu detayli kontrol et
-$ipConfig = Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
-Where-Object { $_.IPAddress -like "$Subnet.*" }
+# netsh ile mevcut IP'yi kontrol et
+$netshOutput = netsh interface ip show config name="$SelectedAdapter"
+$hasCorrectIp = $false
 
-$currentIp = $null
-$ipState = $null
-$needsReassignment = $true
-
-if ($ipConfig) {
-    $currentIp = $ipConfig.IPAddress
-    $ipState = $ipConfig.AddressState
-    
-    Write-ColorText "[DEBUG] Mevcut IP: $currentIp, Durum: $ipState" "Info"
-    Write-Log "Mevcut IP: $currentIp, Durum: $ipState"
-    
-    # Sadece "Preferred" durumundaki IP'ler gecerli sayilir
-    if ($ipState -eq "Preferred") {
-        # Netsh ile de dogrula
-        $netshOutput = netsh interface ip show addresses "$SelectedAdapter" 2>&1
-        if ($netshOutput -match $currentIp) {
-            $needsReassignment = $false
-        }
-    }
-    else {
-        Write-ColorText "[UYARI] IP '$ipState' durumunda - yeniden atanacak." "Warning"
-        Write-Log "IP $ipState durumunda, yeniden atama gerekiyor"
-    }
-}
-
-if (-not $needsReassignment) {
+if ($netshOutput -match "IP Address:\s*($Subnet\.\d+)") {
+    $currentIp = $Matches[1]
+    $hasCorrectIp = $true
     Write-ColorText "[BILGI] Bu kartta zaten $Subnet.x IP adresi var: $currentIp" "Success"
     Write-ColorText "[BILGI] Mevcut ayarlar korundu." "Info"
     Write-Log "IP zaten dogru subnetde: $currentIp"
 }
-if ($needsReassignment) {
-    Write-ColorText "[ISLEM] Kart $Subnet blogunda degil veya IP gecersiz. IP ataniyor..." "Warning"
+
+if (-not $hasCorrectIp) {
+    Write-ColorText "[ISLEM] IP ataniyor..." "Warning"
     Write-Log "IP atama gerekiyor"
     
     $newIp = Find-FreeIp -SubnetBase $Subnet -Min $IpMin -Max $IpMax
@@ -367,28 +345,22 @@ if ($needsReassignment) {
     
     Write-Log "Musait IP bulundu: $newIp"
     
-    try {
-        # netsh ile tek komutta: DHCP kapat + statik IP ata
-        # Bu komut DHCP acik olsa bile calisir
-        netsh interface ip set address name="$SelectedAdapter" static $newIp 255.255.255.0 | Out-Null
-        
-        # Sonucu kontrol et
-        Start-Sleep -Seconds 1
-        $checkIp = (Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress
-        
-        if ($checkIp -contains $newIp) {
-            Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
-            Write-Log "IP atandi: $newIp"
-        }
-        else {
-            throw "IP atanamadi, mevcut IP: $checkIp"
-        }
-        
-        Start-Sleep -Seconds 1
+    # netsh ile IP ata (DHCP acik olsa bile calisir)
+    Write-Host "[ISLEM] netsh ile IP ataniyor..."
+    $result = netsh interface ip set address name="$SelectedAdapter" static $newIp 255.255.255.0
+    
+    Start-Sleep -Seconds 2
+    
+    # Sonucu kontrol et (yine netsh ile)
+    $verifyOutput = netsh interface ip show config name="$SelectedAdapter"
+    if ($verifyOutput -match $newIp) {
+        Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
+        Write-Log "IP atandi: $newIp"
     }
-    catch {
-        Write-ColorText "[HATA] IP atanamadi: $_" "Error"
-        Write-Log "HATA: IP atama hatasi: $_"
+    else {
+        Write-ColorText "[HATA] IP atanamadi!" "Error"
+        Write-Host "netsh ciktisi: $result"
+        Write-Log "HATA: IP atama basarisiz"
         exit 1
     }
 }
