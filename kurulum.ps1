@@ -4,7 +4,7 @@
     
 .DESCRIPTION
     Tailscale VPN kurulumu ve ag yapilandirmasi icin otomatik script.
-    Uzaktan calistirilabilir: irm https://gorkem.co/vpn | iex
+    Uzaktan calistirilabilir: irm https://raw.githubusercontent.com/GorkemGuray/Tailscale-Auto-VPN/main/kurulum.ps1 | iex
     
 .PARAMETER AuthKey
     Tailscale Auth Key (zorunlu - interaktif modda sorulur)
@@ -28,7 +28,7 @@
     Sessiz mod - onay istemez
 
 .EXAMPLE
-    irm https://gorkem.co/vpn | iex
+    irm https://raw.githubusercontent.com/GorkemGuray/Tailscale-Auto-VPN/main/kurulum.ps1 | iex
     
 .EXAMPLE
     .\kurulum.ps1 -AuthKey "tskey-xxx" -DeviceName "Musteri-PLC" -Silent
@@ -191,7 +191,7 @@ function Install-Tailscale {
 Clear-Host
 Write-ColorText "========================================================" "Header"
 Write-ColorText "   PLC ERISIM SISTEMI KURULUM SIHIRBAZI v$($Script:Version)" "Header"
-Write-ColorText "   Uzaktan Calistirma: irm https://gorkem.co/vpn | iex" "Header"
+Write-ColorText "   Uzaktan Calistirma: irm https://raw.githubusercontent.com/GorkemGuray/Tailscale-Auto-VPN/main/kurulum.ps1 | iex" "Header"
 Write-ColorText "========================================================" "Header"
 Write-Host ""
 
