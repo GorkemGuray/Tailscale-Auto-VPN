@@ -240,10 +240,48 @@ Write-ColorText "[OK] Yonetici izni dogrulandi." "Success"
 Write-Log "Yonetici izni dogrulandi"
 
 # 2. CIHAZ ISMI
+# DNS etiketi olarak gecerli karakterler: a-z, A-Z, 0-9, tire (-)
+# Turkce karakterler (ş, ğ, ü, ö, ç, ı) desteklenmez!
+function Test-ValidHostname {
+    param([string]$Name)
+    # DNS etiketi kurallari:
+    # - Sadece ASCII harfler (a-z, A-Z), rakamlar (0-9) ve tire (-) icermeli
+    # - Harf veya rakam ile baslamali
+    # - Tire ile baslamamali veya bitmemeli
+    # - 1-63 karakter uzunlugunda olmali
+    if ([string]::IsNullOrEmpty($Name)) { return $false }
+    if ($Name.Length -gt 63) { return $false }
+    if ($Name -notmatch '^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$' -and $Name -notmatch '^[a-zA-Z0-9]$') { return $false }
+    if ($Name -match '--') { return $false }  # Arka arkaya tire olmamali
+    return $true
+}
+
 if ([string]::IsNullOrEmpty($DeviceName)) {
     do {
         $DeviceName = Read-Host "`n1. Cihaza verilecek isim (Orn: Musteri-Fabrika)"
+        
+        if ([string]::IsNullOrEmpty($DeviceName)) {
+            Write-ColorText "[HATA] Isim bos olamaz!" "Error"
+            continue
+        }
+        
+        if (-not (Test-ValidHostname -Name $DeviceName)) {
+            Write-ColorText "[HATA] Gecersiz isim! Sadece Ingilizce harfler (a-z), rakamlar (0-9) ve tire (-) kullanilabilir." "Error"
+            Write-ColorText "       Turkce karakterler (s, g, u, o, c, i) kullanilaMAZ!" "Warning"
+            Write-ColorText "       Ornek: Musteri-Fabrika, PLC-001, Test123" "Info"
+            $DeviceName = ""
+            continue
+        }
     } while ([string]::IsNullOrEmpty($DeviceName))
+}
+else {
+    # Parametre olarak verildiyse de dogrula
+    if (-not (Test-ValidHostname -Name $DeviceName)) {
+        Write-ColorText "[HATA] Gecersiz cihaz ismi: $DeviceName" "Error"
+        Write-ColorText "       Sadece Ingilizce harfler (a-z), rakamlar (0-9) ve tire (-) kullanilabilir." "Error"
+        Write-Log "HATA: Gecersiz cihaz ismi: $DeviceName"
+        exit 1
+    }
 }
 
 Write-ColorText "[OK] Cihaz ismi: $DeviceName" "Success"
