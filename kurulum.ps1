@@ -347,28 +347,25 @@ if (-not $hasCorrectIp) {
     
     # netsh ile IP ata (DHCP acik olsa bile calisir)
     Write-Host "[ISLEM] netsh ile IP ataniyor..."
-    Write-Host "[DEBUG] Komut: netsh interface ip set address name=`"$SelectedAdapter`" static $newIp 255.255.255.0"
     
     $result = cmd /c "netsh interface ip set address name=`"$SelectedAdapter`" static $newIp 255.255.255.0 2>&1"
-    $exitCode = $LASTEXITCODE
-    
-    Write-Host "[DEBUG] Exit code: $exitCode"
-    Write-Host "[DEBUG] Sonuc: $result"
     
     Start-Sleep -Seconds 2
     
-    # Sonucu kontrol et (yine netsh ile)
-    $verifyOutput = netsh interface ip show config name="$SelectedAdapter"
-    Write-Host "[DEBUG] Verify output:"
-    Write-Host $verifyOutput
+    # Sonucu kontrol et - Get-NetIPAddress ile (netsh Media disconnected durumunda IP gostermiyor)
+    $verifyIp = Get-NetIPAddress -InterfaceAlias $SelectedAdapter -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+    Where-Object { $_.IPAddress -eq $newIp }
     
-    if ($verifyOutput -match $newIp) {
-        Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
+    if ($verifyIp) {
+        Write-ColorText "[BASARILI] Yeni IP: $newIp (Durum: $($verifyIp.AddressState))" "Success"
         Write-Log "IP atandi: $newIp"
+        
+        if ($verifyIp.AddressState -eq "Tentative") {
+            Write-ColorText "[BILGI] IP 'Tentative' durumunda - kablo takildiginda aktif olacak." "Info"
+        }
     }
     else {
         Write-ColorText "[HATA] IP atanamadi!" "Error"
-        Write-Host "Exit code: $exitCode"
         Write-Host "netsh ciktisi: $result"
         Write-Log "HATA: IP atama basarisiz - $result"
         exit 1
