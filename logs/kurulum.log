@@ -1,0 +1,23 @@
+[03-Feb-26 12:14:10.37] ========================================== 
+[03-Feb-26 12:14:10.37] Kurulum Basladi 
+[03-Feb-26 12:14:10.38] ========================================== 
+[03-Feb-26 12:14:10.41] HATA: Yonetici izni yok 
+[03-Feb-26 12:14:14.79] ========================================== 
+[03-Feb-26 12:14:14.79] Kurulum Basladi 
+[03-Feb-26 12:14:14.80] ========================================== 
+[03-Feb-26 12:14:14.82] Yonetici izni dogrulandi 
+[03-Feb-26 12:14:17.87] Cihaz ismi: n 
+[03-Feb-26 12:14:24.83] Secilen ag karti: Ethernet 
+[03-Feb-26 12:14:36.00] Kullanici onayladi, devam ediliyor 
+[03-Feb-26 12:14:36.06] Kart hedef subnetde degil, IP atanacak 
+[03-Feb-26 12:14:36.08] IP 192.168.250.197 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.10] IP 192.168.250.157 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.13] IP 192.168.250.97 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.15] IP 192.168.250.189 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.17] IP 192.168.250.197 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.19] IP 192.168.250.64 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.22] IP 192.168.250.124 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.23] IP 192.168.250.136 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.26] IP 192.168.250.166 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.28] IP 192.168.250.151 kullaniliyor, yeni deneme 
+[03-Feb-26 12:14:36.28] HATA: Bos IP bulunamadi 
