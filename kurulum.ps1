@@ -347,20 +347,30 @@ if (-not $hasCorrectIp) {
     
     # netsh ile IP ata (DHCP acik olsa bile calisir)
     Write-Host "[ISLEM] netsh ile IP ataniyor..."
-    $result = netsh interface ip set address name="$SelectedAdapter" static $newIp 255.255.255.0
+    Write-Host "[DEBUG] Komut: netsh interface ip set address name=`"$SelectedAdapter`" static $newIp 255.255.255.0"
+    
+    $result = cmd /c "netsh interface ip set address name=`"$SelectedAdapter`" static $newIp 255.255.255.0 2>&1"
+    $exitCode = $LASTEXITCODE
+    
+    Write-Host "[DEBUG] Exit code: $exitCode"
+    Write-Host "[DEBUG] Sonuc: $result"
     
     Start-Sleep -Seconds 2
     
     # Sonucu kontrol et (yine netsh ile)
     $verifyOutput = netsh interface ip show config name="$SelectedAdapter"
+    Write-Host "[DEBUG] Verify output:"
+    Write-Host $verifyOutput
+    
     if ($verifyOutput -match $newIp) {
         Write-ColorText "[BASARILI] Yeni IP: $newIp" "Success"
         Write-Log "IP atandi: $newIp"
     }
     else {
         Write-ColorText "[HATA] IP atanamadi!" "Error"
+        Write-Host "Exit code: $exitCode"
         Write-Host "netsh ciktisi: $result"
-        Write-Log "HATA: IP atama basarisiz"
+        Write-Log "HATA: IP atama basarisiz - $result"
         exit 1
     }
 }
